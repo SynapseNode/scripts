@@ -324,6 +324,145 @@ noclipButton.MouseButton1Click:Connect(function()
 	end
 end)
 
+local instantClickTPActive = false
+local mouse = player:GetMouse()
+
+local instantClickTPButton = Instance.new("TextButton")
+instantClickTPButton.Size = UDim2.new(0, 250, 0, 40)
+instantClickTPButton.Text = "Instant Click TP"
+instantClickTPButton.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
+instantClickTPButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+instantClickTPButton.Font = Enum.Font.Gotham
+instantClickTPButton.TextSize = 18
+local instantClickTPCorner = Instance.new("UICorner")
+instantClickTPCorner.CornerRadius = UDim.new(0, 8)
+instantClickTPCorner.Parent = instantClickTPButton
+instantClickTPButton.Parent = buttonHolder
+
+instantClickTPButton.MouseEnter:Connect(function()
+	if not instantClickTPActive then
+		instantClickTPButton.BackgroundColor3 = Color3.fromRGB(80, 80, 80)
+	end
+end)
+instantClickTPButton.MouseLeave:Connect(function()
+	if not instantClickTPActive then
+		instantClickTPButton.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
+	end
+end)
+
+local function teleportToMousePosition()
+	if not player.Character or not player.Character:FindFirstChild("HumanoidRootPart") then return end
+	local hrp = player.Character.HumanoidRootPart
+	local mousePos = mouse.Hit.p
+	-- Чтобы избежать телепорта на слишком низкую позицию (например, под землю), можно подстроить Y:
+	local newPos = Vector3.new(mousePos.X, math.max(mousePos.Y, 1), mousePos.Z)
+	hrp.CFrame = CFrame.new(newPos + Vector3.new(0, 3, 0)) -- немного выше, чтобы не провалиться
+end
+
+local clickConnection
+
+instantClickTPButton.MouseButton1Click:Connect(function()
+	instantClickTPActive = not instantClickTPActive
+	if instantClickTPActive then
+		instantClickTPButton.BackgroundColor3 = Color3.fromRGB(0, 200, 0)
+		clickConnection = mouse.Button1Down:Connect(function()
+			teleportToMousePosition()
+		end)
+	else
+		instantClickTPButton.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
+		if clickConnection then
+			clickConnection:Disconnect()
+			clickConnection = nil
+		end
+	end
+end)
+
+local smoothTPActive = false
+local smoothTPConnection
+
+local smoothTPButton = Instance.new("TextButton")
+smoothTPButton.Size = UDim2.new(0, 250, 0, 40)
+smoothTPButton.Text = "Smooth TP"
+smoothTPButton.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
+smoothTPButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+smoothTPButton.Font = Enum.Font.Gotham
+smoothTPButton.TextSize = 18
+local smoothTPCorner = Instance.new("UICorner")
+smoothTPCorner.CornerRadius = UDim.new(0, 8)
+smoothTPCorner.Parent = smoothTPButton
+smoothTPButton.Parent = buttonHolder
+
+smoothTPButton.MouseEnter:Connect(function()
+	if not smoothTPActive then
+		smoothTPButton.BackgroundColor3 = Color3.fromRGB(80, 80, 80)
+	end
+end)
+smoothTPButton.MouseLeave:Connect(function()
+	if not smoothTPActive then
+		smoothTPButton.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
+	end
+end)
+
+local RunService = game:GetService("RunService")
+
+local function lerp(a, b, t)
+	return a + (b - a) * t
+end
+
+local function smoothTeleport(destination)
+	local character = player.Character
+	if not character or not character:FindFirstChild("HumanoidRootPart") then return end
+	local hrp = character.HumanoidRootPart
+
+	-- Для плавности используем Heartbeat
+	local speed = 1 -- studs в секунду
+	local connection
+	connection = RunService.Heartbeat:Connect(function(dt)
+		local currentPos = hrp.Position
+		local direction = (destination - currentPos)
+		local distance = direction.Magnitude
+		if distance < 0.1 then
+			hrp.CFrame = CFrame.new(destination)
+			connection:Disconnect()
+			return
+		end
+
+		local step = speed * dt
+		if step > distance then
+			step = distance
+		end
+
+		local newPos = currentPos + direction.Unit * step
+		hrp.CFrame = CFrame.new(newPos)
+	end)
+	return connection
+end
+
+local currentSmoothTPConnection
+
+smoothTPButton.MouseButton1Click:Connect(function()
+	smoothTPActive = not smoothTPActive
+	if smoothTPActive then
+		smoothTPButton.BackgroundColor3 = Color3.fromRGB(0, 200, 0)
+		currentSmoothTPConnection = mouse.Button1Down:Connect(function()
+			if currentSmoothTPConnection then
+				currentSmoothTPConnection:Disconnect()
+			end
+			-- Начинаем плавное перемещение к позиции мыши
+			local dest = mouse.Hit.p
+			-- Подстраиваем Y, чтоб не проваливаться в землю:
+			dest = Vector3.new(dest.X, math.max(dest.Y, 1), dest.Z) + Vector3.new(0,3,0)
+			currentSmoothTPConnection = smoothTeleport(dest)
+		end)
+	else
+		smoothTPButton.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
+		if currentSmoothTPConnection then
+			currentSmoothTPConnection:Disconnect()
+			currentSmoothTPConnection = nil
+		end
+	end
+end)
+
 local removeButton = Instance.new("TextButton")
 removeButton.Size = UDim2.new(0, 250, 0, 40)
 removeButton.Text = "Remove GUI"
