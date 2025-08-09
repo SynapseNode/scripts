@@ -122,8 +122,7 @@ createButton("Set speed 50", function()
 	end
 end)
 
-createButton("Set jump power 50", function()
-	local humanoid = game.Players.LocalPlayer.Character and game.Players.LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
+local humanoid = game.Players.LocalPlayer.Character and game.Players.LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
 createButton("Set jump power 100", function()
 	local humanoid = player.Character and player.Character:FindFirstChildOfClass("Humanoid")
 	if humanoid then
@@ -140,7 +139,7 @@ createButton("Remove GUI", function()
 	end
 end)
 
--- Сворачивание
+	-- Сворачивание
 local isMinimized = false
 toggleButton.MouseButton1Click:Connect(function()
 	isMinimized = not isMinimized
