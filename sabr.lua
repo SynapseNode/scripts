@@ -1,15 +1,14 @@
 local player = game.Players.LocalPlayer
-local screenGui = Instance.new("SABR GUI")
+local screenGui = Instance.new("ScreenGui")
 screenGui.Parent = player:WaitForChild("PlayerGui")
 screenGui.ResetOnSpawn = false
 
--- Главное окно
 local mainFrame = Instance.new("Frame")
 mainFrame.Size = UDim2.new(0, 300, 0, 250)
 mainFrame.Position = UDim2.new(0.3, 0, 0.3, 0)
 mainFrame.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
 mainFrame.BorderSizePixel = 0
-mainFrame.Active = true -- для драга
+mainFrame.Active = true
 mainFrame.Draggable = true
 mainFrame.Parent = screenGui
 
@@ -17,7 +16,6 @@ local corner = Instance.new("UICorner")
 corner.CornerRadius = UDim.new(0, 10)
 corner.Parent = mainFrame
 
--- Верхняя панель
 local titleBar = Instance.new("Frame")
 titleBar.Size = UDim2.new(1, 0, 0, 35)
 titleBar.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
@@ -35,7 +33,6 @@ titleText.BackgroundTransparency = 1
 titleText.TextXAlignment = Enum.TextXAlignment.Left
 titleText.Parent = titleBar
 
--- Кнопка сворачивания
 local toggleButton = Instance.new("TextButton")
 toggleButton.Size = UDim2.new(0, 35, 1, 0)
 toggleButton.Position = UDim2.new(1, -35, 0, 0)
@@ -46,7 +43,6 @@ toggleButton.Font = Enum.Font.GothamBold
 toggleButton.TextSize = 20
 toggleButton.Parent = titleBar
 
--- Контейнер для кнопок
 local buttonHolder = Instance.new("Frame")
 buttonHolder.Size = UDim2.new(1, 0, 1, -35)
 buttonHolder.Position = UDim2.new(0, 0, 0, 35)
@@ -64,7 +60,6 @@ local UIPadding = Instance.new("UIPadding")
 UIPadding.PaddingTop = UDim.new(0, 10)
 UIPadding.Parent = buttonHolder
 
--- Создание кнопок
 local function createButton(text, callback)
 	local button = Instance.new("TextButton")
 	button.Size = UDim2.new(0, 250, 0, 40)
@@ -78,19 +73,23 @@ local function createButton(text, callback)
 	btnCorner.CornerRadius = UDim.new(0, 8)
 	btnCorner.Parent = button
 
-	-- Эффект наведения
 	button.MouseEnter:Connect(function()
-		button.BackgroundColor3 = Color3.fromRGB(80, 80, 80)
+		if button.BackgroundColor3 ~= Color3.fromRGB(0, 170, 0) then
+			button.BackgroundColor3 = Color3.fromRGB(80, 80, 80)
+		end
 	end)
 	button.MouseLeave:Connect(function()
-		button.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
+		if button.BackgroundColor3 ~= Color3.fromRGB(0, 170, 0) then
+			button.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
+		end
 	end)
 
 	button.Parent = buttonHolder
-	button.MouseButton1Click:Connect(callback)
+	button.MouseButton1Click:Connect(function()
+		callback(button)
+	end)
 end
 
--- Кнопки
 createButton("Set speed 50", function()
 	local humanoid = player.Character and player.Character:FindFirstChildOfClass("Humanoid")
 	if humanoid then
@@ -106,6 +105,39 @@ createButton("Set jump power 100", function()
 	end
 end)
 
+local noclipActive = false
+local noclipConnection
+
+createButton("Noclip", function(btn)
+	noclipActive = not noclipActive
+	if noclipActive then
+		btn.BackgroundColor3 = Color3.fromRGB(0, 170, 0)
+		noclipConnection = game:GetService("RunService").Stepped:Connect(function()
+			if player.Character then
+				for _, part in pairs(player.Character:GetDescendants()) do
+					if part:IsA("BasePart") then
+						part.CanCollide = false
+					end
+				end
+			end
+		end)
+	else
+		btn.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
+		if noclipConnection then
+			noclipConnection:Disconnect()
+			noclipConnection = nil
+		end
+		if player.Character then
+			for _, part in pairs(player.Character:GetDescendants()) do
+				if part:IsA("BasePart") then
+					part.CanCollide = true
+				end
+			end
+		end
+	end
+end)
+
+
 createButton("Remove GUI", function()
 	if screenGui then
 		screenGui:Destroy()
@@ -113,7 +145,6 @@ createButton("Remove GUI", function()
 	end
 end)
 
--- Сворачивание
 local isMinimized = false
 toggleButton.MouseButton1Click:Connect(function()
 	isMinimized = not isMinimized
