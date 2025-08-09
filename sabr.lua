@@ -1,5 +1,5 @@
 local player = game.Players.LocalPlayer
-local screenGui = Instance.new("ScreenGui")
+local screenGui = Instance.new("SABR GUI")
 screenGui.Parent = player:WaitForChild("PlayerGui")
 screenGui.ResetOnSpawn = false
 
