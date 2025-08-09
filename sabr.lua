@@ -4,7 +4,7 @@ screenGui.Parent = player:WaitForChild("PlayerGui")
 screenGui.ResetOnSpawn = false
 
 local mainFrame = Instance.new("Frame")
-mainFrame.Size = UDim2.new(0, 300, 0, 250)
+mainFrame.Size = UDim2.new(0, 300, 0, 300)
 mainFrame.Position = UDim2.new(0.3, 0, 0.3, 0)
 mainFrame.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
 mainFrame.BorderSizePixel = 0
@@ -60,85 +60,294 @@ local UIPadding = Instance.new("UIPadding")
 UIPadding.PaddingTop = UDim.new(0, 10)
 UIPadding.Parent = buttonHolder
 
-local function createButton(text, callback)
-	local button = Instance.new("TextButton")
-	button.Size = UDim2.new(0, 250, 0, 40)
-	button.Text = text
-	button.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
-	button.TextColor3 = Color3.fromRGB(255, 255, 255)
-	button.Font = Enum.Font.Gotham
-	button.TextSize = 18
+local function createSlider(text, min, max, default, callback)
+	local container = Instance.new("Frame")
+	container.Size = UDim2.new(0, 250, 0, 50)
+	container.BackgroundTransparency = 1
+	container.Parent = buttonHolder
 
-	local btnCorner = Instance.new("UICorner")
-	btnCorner.CornerRadius = UDim.new(0, 8)
-	btnCorner.Parent = button
+	local label = Instance.new("TextLabel")
+	label.Size = UDim2.new(1, 0, 0, 20)
+	label.Position = UDim2.new(0, 0, 0, 0)
+	label.BackgroundTransparency = 1
+	label.Text = text .. ": " .. tostring(default)
+	label.TextColor3 = Color3.fromRGB(240, 240, 240)
+	label.Font = Enum.Font.Gotham
+	label.TextSize = 18
+	label.TextXAlignment = Enum.TextXAlignment.Left
+	label.Parent = container
 
-	button.MouseEnter:Connect(function()
-		if button.BackgroundColor3 ~= Color3.fromRGB(0, 170, 0) then
-			button.BackgroundColor3 = Color3.fromRGB(80, 80, 80)
+	local sliderBg = Instance.new("Frame")
+	sliderBg.Size = UDim2.new(1, 0, 0, 12)
+	sliderBg.Position = UDim2.new(0, 0, 0, 30)
+	sliderBg.BackgroundColor3 = Color3.fromRGB(35, 35, 35)
+	sliderBg.BorderSizePixel = 0
+	sliderBg.Parent = container
+
+	local bgCorner = Instance.new("UICorner")
+	bgCorner.CornerRadius = UDim.new(0, 6)
+	bgCorner.Parent = sliderBg
+
+	local sliderFill = Instance.new("Frame")
+	sliderFill.Size = UDim2.new((default - min) / (max - min), 0, 1, 0)
+	sliderFill.BackgroundColor3 = Color3.fromRGB(0, 200, 100)
+	sliderFill.BorderSizePixel = 0
+	sliderFill.Parent = sliderBg
+
+	local fillCorner = Instance.new("UICorner")
+	fillCorner.CornerRadius = UDim.new(0, 6)
+	fillCorner.Parent = sliderFill
+
+	local sliderButton = Instance.new("Frame")
+	sliderButton.Size = UDim2.new(0, 24, 0, 24)
+	sliderButton.Position = UDim2.new((default - min) / (max - min), -12, 0, -6)
+	sliderButton.BackgroundColor3 = Color3.fromRGB(0, 200, 100)
+	sliderButton.BorderSizePixel = 0
+	sliderButton.Parent = sliderBg
+
+	local buttonCorner = Instance.new("UICorner")
+	buttonCorner.CornerRadius = UDim.new(1, 0)
+	buttonCorner.Parent = sliderButton
+
+	-- Добавим тень для кнопки
+	local shadow = Instance.new("ImageLabel")
+	shadow.Image = "rbxassetid://1316045217" -- simple circle shadow image
+	shadow.Size = UDim2.new(1.5, 0, 1.5, 0)
+	shadow.Position = UDim2.new(-0.25, 0, -0.25, 0)
+	shadow.BackgroundTransparency = 1
+	shadow.ZIndex = sliderButton.ZIndex - 1
+	shadow.Parent = sliderButton
+
+	local dragging = false
+
+	local function updateSlider(input)
+		local x = math.clamp(input.Position.X - sliderBg.AbsolutePosition.X, 0, sliderBg.AbsoluteSize.X)
+		local percent = x / sliderBg.AbsoluteSize.X
+		sliderFill.Size = UDim2.new(percent, 0, 1, 0)
+		sliderButton.Position = UDim2.new(percent, -12, 0, -6)
+		local value = math.floor(min + (max - min) * percent)
+		label.Text = text .. ": " .. value
+		callback(value)
+	end
+
+	sliderButton.InputBegan:Connect(function(input)
+		if input.UserInputType == Enum.UserInputType.MouseButton1 then
+			dragging = true
 		end
 	end)
-	button.MouseLeave:Connect(function()
-		if button.BackgroundColor3 ~= Color3.fromRGB(0, 170, 0) then
-			button.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
+	sliderButton.InputEnded:Connect(function(input)
+		if input.UserInputType == Enum.UserInputType.MouseButton1 then
+			dragging = false
 		end
 	end)
-
-	button.Parent = buttonHolder
-	button.MouseButton1Click:Connect(function()
-		callback(button)
+	sliderBg.InputBegan:Connect(function(input)
+		if input.UserInputType == Enum.UserInputType.MouseButton1 then
+			updateSlider(input)
+			dragging = true
+		end
+	end)
+	sliderBg.InputEnded:Connect(function(input)
+		if input.UserInputType == Enum.UserInputType.MouseButton1 then
+			dragging = false
+		end
+	end)
+	game:GetService("UserInputService").InputChanged:Connect(function(input)
+		if dragging and input.UserInputType == Enum.UserInputType.MouseMovement then
+			updateSlider(input)
+		end
 	end)
 end
 
-createButton("Set speed 50", function()
+
+local function updateWalkSpeed(speed)
 	local humanoid = player.Character and player.Character:FindFirstChildOfClass("Humanoid")
 	if humanoid then
-		humanoid.WalkSpeed = 50
+		humanoid.WalkSpeed = speed
 	end
-end)
+end
 
-createButton("Set jump power 100", function()
+local function updateJumpPower(jump)
 	local humanoid = player.Character and player.Character:FindFirstChildOfClass("Humanoid")
 	if humanoid then
 		humanoid.UseJumpPower = true
-		humanoid.JumpPower = 100
+		humanoid.JumpPower = jump
+	end
+end
+
+local godModeActive = false
+local godModeConnection
+
+local godModeButton = Instance.new("TextButton")
+godModeButton.Size = UDim2.new(0, 250, 0, 40)
+godModeButton.Text = "God Mode"
+godModeButton.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
+godModeButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+godModeButton.Font = Enum.Font.Gotham
+godModeButton.TextSize = 18
+local godCorner = Instance.new("UICorner")
+godCorner.CornerRadius = UDim.new(0, 8)
+godCorner.Parent = godModeButton
+godModeButton.Parent = buttonHolder
+
+godModeButton.MouseEnter:Connect(function()
+	if not godModeActive then
+		godModeButton.BackgroundColor3 = Color3.fromRGB(80, 80, 80)
 	end
 end)
+godModeButton.MouseLeave:Connect(function()
+	if not godModeActive then
+		godModeButton.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
+	end
+end)
+
+local function enableGodMode()
+	local character = player.Character
+	if not character then return end
+	local humanoid = character:FindFirstChildOfClass("Humanoid")
+	if not humanoid then return end
+
+	humanoid.MaxHealth = 1e9
+	humanoid.Health = humanoid.MaxHealth
+
+	if godModeConnection then
+		godModeConnection:Disconnect()
+	end
+
+	godModeConnection = humanoid.HealthChanged:Connect(function()
+		if godModeActive and humanoid.Health < humanoid.MaxHealth then
+			humanoid.Health = humanoid.MaxHealth
+		end
+	end)
+end
+
+local function disableGodMode()
+	if godModeConnection then
+		godModeConnection:Disconnect()
+		godModeConnection = nil
+	end
+	local character = player.Character
+	if not character then return end
+	local humanoid = character:FindFirstChildOfClass("Humanoid")
+	if not humanoid then return end
+
+	-- Возвращаем стандартные значения
+	humanoid.MaxHealth = 100
+	humanoid.Health = 100
+end
+
+godModeButton.MouseButton1Click:Connect(function()
+	godModeActive = not godModeActive
+	if godModeActive then
+		godModeButton.BackgroundColor3 = Color3.fromRGB(0, 200, 0)
+		enableGodMode()
+	else
+		godModeButton.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
+		disableGodMode()
+	end
+end)
+
+-- Чтобы god mode работал при респавне, можно добавить слушатель персонажа:
+player.CharacterAdded:Connect(function(char)
+	if godModeActive then
+		wait(0.1)
+		enableGodMode()
+	end
+end)
+
+
+-- Создаём слайдеры
+createSlider("Speed", 10, 100, 16, updateWalkSpeed) -- По умолчанию 16 (стандартная скорость)
+createSlider("Jump", 20, 150, 50, updateJumpPower) -- По умолчанию 50 (стандартный прыжок)
+
+-- Остальной твой функционал
 
 local noclipActive = false
 local noclipConnection
 
-createButton("Noclip", function(btn)
-	noclipActive = not noclipActive
-	if noclipActive then
-		btn.BackgroundColor3 = Color3.fromRGB(0, 170, 0)
-		noclipConnection = game:GetService("RunService").Stepped:Connect(function()
-			if player.Character then
-				for _, part in pairs(player.Character:GetDescendants()) do
-					if part:IsA("BasePart") then
-						part.CanCollide = false
-					end
+local function setNoclip(canClip)
+	if player.Character then
+		for _, part in pairs(player.Character:GetDescendants()) do
+			if part:IsA("BasePart") then
+				part.CanCollide = canClip
+			end
+		end
+	end
+end
+
+local function startNoclip()
+	noclipConnection = game:GetService("RunService").Stepped:Connect(function()
+		if player.Character then
+			for _, part in pairs(player.Character:GetDescendants()) do
+				if part:IsA("BasePart") then
+					part.CanCollide = false
 				end
 			end
-		end)
+		end
+	end)
+end
+
+local noclipButton = Instance.new("TextButton")
+noclipButton.Size = UDim2.new(0, 250, 0, 40)
+noclipButton.Text = "Noclip"
+noclipButton.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
+noclipButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+noclipButton.Font = Enum.Font.Gotham
+noclipButton.TextSize = 18
+local btnCorner = Instance.new("UICorner")
+btnCorner.CornerRadius = UDim.new(0, 8)
+btnCorner.Parent = noclipButton
+noclipButton.Parent = buttonHolder
+
+noclipButton.MouseEnter:Connect(function()
+	if noclipButton.BackgroundColor3 ~= Color3.fromRGB(0, 170, 0) then
+		noclipButton.BackgroundColor3 = Color3.fromRGB(80, 80, 80)
+	end
+end)
+noclipButton.MouseLeave:Connect(function()
+	if noclipButton.BackgroundColor3 ~= Color3.fromRGB(0, 170, 0) then
+		noclipButton.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
+	end
+end)
+
+noclipButton.MouseButton1Click:Connect(function()
+	noclipActive = not noclipActive
+	if noclipActive then
+		noclipButton.BackgroundColor3 = Color3.fromRGB(0, 170, 0)
+		startNoclip()
 	else
-		btn.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
+		noclipButton.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
 		if noclipConnection then
 			noclipConnection:Disconnect()
 			noclipConnection = nil
 		end
-		if player.Character then
-			for _, part in pairs(player.Character:GetDescendants()) do
-				if part:IsA("BasePart") then
-					part.CanCollide = true
-				end
-			end
-		end
+		setNoclip(true)
 	end
 end)
 
+local removeButton = Instance.new("TextButton")
+removeButton.Size = UDim2.new(0, 250, 0, 40)
+removeButton.Text = "Remove GUI"
+removeButton.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
+removeButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+removeButton.Font = Enum.Font.Gotham
+removeButton.TextSize = 18
+local removeCorner = Instance.new("UICorner")
+removeCorner.CornerRadius = UDim.new(0, 8)
+removeCorner.Parent = removeButton
+removeButton.Parent = buttonHolder
 
-createButton("Remove GUI", function()
+removeButton.MouseEnter:Connect(function()
+	if removeButton.BackgroundColor3 ~= Color3.fromRGB(0, 170, 0) then
+		removeButton.BackgroundColor3 = Color3.fromRGB(80, 80, 80)
+	end
+end)
+removeButton.MouseLeave:Connect(function()
+	if removeButton.BackgroundColor3 ~= Color3.fromRGB(0, 170, 0) then
+		removeButton.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
+	end
+end)
+
+removeButton.MouseButton1Click:Connect(function()
 	if screenGui then
 		screenGui:Destroy()
 		script:Destroy()
@@ -150,5 +359,5 @@ toggleButton.MouseButton1Click:Connect(function()
 	isMinimized = not isMinimized
 	buttonHolder.Visible = not isMinimized
 	toggleButton.Text = isMinimized and "+" or "-"
-	mainFrame.Size = isMinimized and UDim2.new(0, 300, 0, 35) or UDim2.new(0, 300, 0, 250)
+	mainFrame.Size = isMinimized and UDim2.new(0, 300, 0, 35) or UDim2.new(0, 300, 0, 300)
 end)
